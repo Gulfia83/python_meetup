@@ -1,0 +1,21 @@
+version: '3.8'
+services:
+  web:
+    build:
+      context: .
+    command: /app/start.sh web
+    volumes:
+      - .:/app
+    ports:
+      - '8000:8000'
+    restart: always
+
+  bot:
+    build:
+      context: .
+    command: /app/start.sh bot
+    volumes:
+      - .:/app
+    restart: always
+    depends_on:
+      - web
