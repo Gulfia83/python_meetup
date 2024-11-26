@@ -64,9 +64,6 @@ def choose_action(update: Updater, context: CallbackContext):
 def get_questions(update: Updater, context: CallbackContext):
     pass
 
-def show_program(update: Updater, context: CallbackContext):
-    pass
-
 def add_question(update: Updater, context: CallbackContext):
     pass
 
