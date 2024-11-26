@@ -16,7 +16,7 @@ def show_program(update: Updater, context: CallbackContext):
         update.callback_query.message.reply_text(
             "На сегодня программ не запланировано."
         )
-        return "BACK_TO_MENU"
+        return "START"
 
     text = "Программа на сегодня:\n\n"
     text += f"<b><i>{program_today.name}</i></b>\n\n"
