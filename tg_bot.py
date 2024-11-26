@@ -41,7 +41,7 @@ def start(update: Updater, context: CallbackContext):
             'Добро пожаловать на наше мероприятие',
             reply_markup=reply_markup,
         )
-    else:
+    elif update.callback_query:
         query = update.callback_query
         query.message.reply_text(
             'Выберите действие:',
@@ -147,30 +147,31 @@ def confirm_donation_custom(update: Updater, context: CallbackContext):
     )
     return "AWAIT_PAYMENT"
 
-def await_payment(update: Updater, context: CallbackContext):
-    payment = update.message.successful_payment
-    payload = payment.invoice_payload
-    amount = int(payment.total_amount) / 100
-
-    user, _ = User.objects.get_or_create(
-        telegram_id=update.effective_user.id, defaults={"name": update.effective_user.first_name}
-    )
-    Donate.objects.create(user=user, amount=amount, donated_at=now())
-
-    update.message.reply_text(
-        f"Спасибо за ваш донат на сумму {amount:.2f} ₽! 🙏",
-        parse_mode=ParseMode.HTML,
-    )
-    return start(update, context)
-
-
 def pre_checkout_callback(update: Updater, context: CallbackContext):
     query = update.pre_checkout_query
+    payload = query.invoice_payload
+    amount = int(payload.split("_")[1])
 
     if query.invoice_payload.startswith("donation_"):
         query.answer(ok=True)
+        user, _ = User.objects.get_or_create(
+        tg_id=update.effective_user.id, defaults={"tg_nick": update.effective_user.first_name}
+        )
+        Donate.objects.create(user=user, amount=amount, donated_at=now())
+        user = context.bot_data['user']
+        user.tg_state = 'START'
+        user.save()
+
     else:
         query.answer(ok=False, error_message="Некорректный payload. Попробуйте снова.")
+
+
+def await_payment(update: Updater, context: CallbackContext):
+    context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text='''Платеж прошел успешно!''',
+        )
+    return start(update, context)
 #!-----------------------------------------------------------------------------------------
 
 
@@ -346,8 +347,8 @@ def handle_users_reply(update,
         'NETWORK_COMMUNICATE': network_communicate,
         'NEXT_CONTACT': next_contact,
         'CONFIRM_DONATION': confirm_donation,
-        "AWAIT_PAYMENT": await_payment,
         "CONFIRM_DONATION_CUSTOM": confirm_donation_custom,
+        "AWAIT_PAYMENT": await_payment
         }
     state_handler = states_functions[user_state]
     try:
