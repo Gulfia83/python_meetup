@@ -1,4 +1,5 @@
 import os
+from random import choice
 
 import django
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
@@ -138,7 +139,77 @@ def get_position(update: Updater, context: CallbackContext):
 
 
 def make_networking(update: Updater, context: CallbackContext):
-    pass
+    active_users_count = User.objects.filter(active=True).count()
+    keyboard = [
+        [InlineKeyboardButton('Познакомиться',
+                              callback_data='find_contact')] if active_users_count > 1 else [],
+        [InlineKeyboardButton('Отказаться от участия',
+                              callback_data='cancel_networking')],
+        [InlineKeyboardButton('Главное меню',
+                              callback_data='to_start')]
+    ]
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f'''
+        {context.bot_data['user'].name}, рады видеть вас в нетворкинге.
+        Сейчас нас {active_users_count} человек''',
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+   
+    return 'NETWORK_COMMUNICATE'
+
+
+def network_communicate(update: Updater, context: CallbackContext):
+    data = update.callback_query.data
+    if data == 'to_start':
+        return start(update, context)
+    elif data == 'cancel_networking':
+        return cancel_networking(update, context)
+    elif data == 'find_contact':
+        return find_contact(update, context)
+
+
+def cancel_networking(update: Updater, context: CallbackContext):
+    context.bot_data['user'].active = False
+    context.bot_data['user'].save
+    return start(update, context)
+
+
+def find_contact(update: Updater, context: CallbackContext):
+    
+    context.bot_data['networking'] = context.bot_data['user']
+    while context.bot_data['networking'] == context.bot_data['user']:
+        context.bot_data['networking'] = choice(
+            User.objects.filter(active=True).exclude(tg_id=update.effective_chat.id)
+        )
+
+    keyboard = [
+        [InlineKeyboardButton('Следующий контакт', callback_data='next_contact')],
+        [InlineKeyboardButton('Отказаться от участия',
+                              callback_data='cancel_networking')],
+        [InlineKeyboardButton('Главное меню', callback_data='to_start')]
+    ]
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f'''
+        {context.bot_data['networking'].name}
+        {context.bot_data['networking'].position} в {context.bot_data['networking'].company}
+        Связаться в Telegram:
+        @{context.bot_data['networking'].tg_nick}
+        ''',
+        reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    return 'NEXT_CONTACT'
+
+
+def next_contact(update: Updater, context: CallbackContext):
+    data = update.callback_query.data
+    if data == 'to_start':
+        return start(update, context)
+    elif data == 'cancel_networking':
+        return cancel_networking(update, context)
+    elif data == 'next_contact':
+        return find_contact(update, context)
 
 
 def get_donation(update: Updater, context: CallbackContext):
@@ -151,13 +222,16 @@ def handle_users_reply(update,
     if update.message:
         user_reply = update.message.text
         chat_id = update.message.chat_id
+        username = update.message.from_user.username
     elif update.callback_query:
         user_reply = update.callback_query.data
         chat_id = update.callback_query.message.chat_id
+        username = update.callback_query.from_user.username
     else:
         return
     user, created = User.objects.get_or_create(tg_id=chat_id,
-                                               defaults={'tg_state': 'START'})
+                                               defaults={'tg_state': 'START',
+                                                         'tg_nick': username})
     context.bot_data['user'] = user
     if user_reply == '/start':
         user_state = 'START'
@@ -170,6 +244,8 @@ def handle_users_reply(update,
         'GET_NAME': get_name,
         'GET_COMPANY': get_company,
         'GET_POSITION': get_position,
+        'NETWORK_COMMUNICATE': network_communicate,
+        'NEXT_CONTACT': next_contact
         }
     state_handler = states_functions[user_state]
     try:
