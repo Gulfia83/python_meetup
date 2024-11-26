@@ -8,6 +8,11 @@ class User(models.Model):
         max_length=50,
         blank=True,
     )
+    tg_state = models.CharField(
+        'Состояние бота',
+        max_length=50,
+        default='START'
+    )
     name = models.CharField(
         'Имя',
         max_length=50,
@@ -62,7 +67,7 @@ class Donate(models.Model):
 
     def __str__(self) -> str:
         return f'{self.user.name} - {self.amount}'
-  
+
     class Meta:
         verbose_name = 'Донат',
         verbose_name_plural = 'Донаты'
