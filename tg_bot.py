@@ -62,11 +62,6 @@ def get_questions(update: Updater, context: CallbackContext):
     pass
 
 
-def back_to_menu(update: Updater, context:CallbackContext):
-    if update.callback_query.data == 'to_start':
-        return start(update, context)
-
-
 def add_question(update: Updater, context: CallbackContext):
     pass
 
@@ -248,7 +243,6 @@ def handle_users_reply(update,
         'GET_POSITION': get_position,
         'NETWORK_COMMUNICATE': network_communicate,
         'NEXT_CONTACT': next_contact,
-        'BACK_TO_MENU': back_to_menu,
         }
     state_handler = states_functions[user_state]
     try:

@@ -33,4 +33,4 @@ def show_program(update: Updater, context: CallbackContext):
         parse_mode=ParseMode.HTML,
     )
 
-    return "BACK_TO_MENU"
+    return "START"
