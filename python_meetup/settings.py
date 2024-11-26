@@ -19,7 +19,7 @@ DEBUG = env.bool("DEBUG", default=True)
 
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1"])
 TG_BOT_TOKEN = env.str('TG_BOT_TOKEN')
-
+PAY_MASTER_TOKEN = env.str("PAY_MASTER_TOKEN")
 # Application definition
 
 INSTALLED_APPS = [

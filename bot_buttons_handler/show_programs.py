@@ -1,4 +1,3 @@
-from ast import parse
 from datetime import date
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, ParseMode

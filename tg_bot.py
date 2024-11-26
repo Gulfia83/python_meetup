@@ -1,21 +1,24 @@
+from email import message
 import os
 from random import choice
 
 from datetime import date
 
 import django
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
+from django.utils.timezone import now
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice, ParseMode
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
-      CallbackContext, CallbackQueryHandler
+      CallbackContext, CallbackQueryHandler, PreCheckoutQueryHandler
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'python_meetup.settings')
 django.setup()
 
-from python_meetup.settings import TG_BOT_TOKEN
+from python_meetup.settings import TG_BOT_TOKEN, PAY_MASTER_TOKEN
 
-from bot.models import User, Program, Lecture
+from bot.models import Donate, User, Program, Lecture
 
 from bot_buttons_handler.show_programs import show_program
+
 
 
 def start(update: Updater, context: CallbackContext):
@@ -66,6 +69,109 @@ def get_questions(update: Updater, context: CallbackContext):
 
 def add_question(update: Updater, context: CallbackContext):
     pass
+
+#!-----------------------------------------------------------------------------------------
+def get_donation(update: Updater, context: CallbackContext):
+    keyboard = [
+        [InlineKeyboardButton('50 ₽', callback_data='donate_50')],
+        [InlineKeyboardButton('100 ₽', callback_data='donate_100')],
+        [InlineKeyboardButton('500 ₽', callback_data='donate_500')],
+        [InlineKeyboardButton('Ввести свою сумму', callback_data='user_donate')],
+        [InlineKeyboardButton('Назад', callback_data='to_start')],
+    ]
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Вы можете помочь нам финансово. Выберите сумму доната:",
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
+    return "CONFIRM_DONATION"
+
+
+
+def confirm_donation(update: Updater, context: CallbackContext):
+    query = update.callback_query
+    data = query.data
+    chat_id = query.message.chat_id
+
+    if update.callback_query.data == 'to_start':
+        return start(update, context)
+    if update.callback_query.data == 'user_donate':
+        return user_sum_for_donate(update, context)
+
+
+    if data.startswith("donate_"):
+        amount = int(data.split("_")[1])
+        prices = [LabeledPrice(label=f"Донат на сумму {amount} ₽", amount=amount * 100)]
+
+        context.bot.send_invoice(
+            chat_id=chat_id,
+            title="Донат на поддержку",
+            description=f"Спасибо за ваше желание поддержать наш проект на {amount} ₽!",
+            payload=f"donation_{amount}",
+            provider_token=PAY_MASTER_TOKEN,
+            currency="RUB",
+            prices=prices,
+            start_parameter="donation",
+        )
+        return "AWAIT_PAYMENT"
+
+    if data == "to_start":
+        return start(update, context)
+
+
+def user_sum_for_donate(update: Updater, context: CallbackContext):
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Введите желаемую сумму пожертования'
+    )
+
+    return "CONFIRM_DONATION_CUSTOM"
+
+
+def confirm_donation_custom(update: Updater, context: CallbackContext):
+    chat_id = update.effective_chat.id
+    message_text = update.message.text
+
+    amount = int(message_text)
+    prices = [LabeledPrice(label=f"Донат на сумму {amount} ₽", amount=amount * 100)]
+
+    context.bot.send_invoice(
+    chat_id,
+    title="Донат на поддержку",
+    description=f"Спасибо за ваше желание поддержать наш проект на {amount} ₽!",
+    payload=f"donation_{amount}",
+    provider_token=PAY_MASTER_TOKEN,
+    currency="RUB",
+    prices=prices,
+    start_parameter="donation",
+    )
+    return "AWAIT_PAYMENT"
+
+def await_payment(update: Updater, context: CallbackContext):
+    payment = update.message.successful_payment
+    payload = payment.invoice_payload
+    amount = int(payment.total_amount) / 100
+
+    user, _ = User.objects.get_or_create(
+        telegram_id=update.effective_user.id, defaults={"name": update.effective_user.first_name}
+    )
+    Donate.objects.create(user=user, amount=amount, donated_at=now())
+
+    update.message.reply_text(
+        f"Спасибо за ваш донат на сумму {amount:.2f} ₽! 🙏",
+        parse_mode=ParseMode.HTML,
+    )
+    return start(update, context)
+
+
+def pre_checkout_callback(update: Updater, context: CallbackContext):
+    query = update.pre_checkout_query
+
+    if query.invoice_payload.startswith("donation_"):
+        query.answer(ok=True)
+    else:
+        query.answer(ok=False, error_message="Некорректный payload. Попробуйте снова.")
+#!-----------------------------------------------------------------------------------------
 
 
 def get_networking(update: Updater, context: CallbackContext):
@@ -209,10 +315,6 @@ def next_contact(update: Updater, context: CallbackContext):
         return find_contact(update, context)
 
 
-def get_donation(update: Updater, context: CallbackContext):
-    pass
-
-
 def handle_users_reply(update,
                        context,
                        ):
@@ -243,6 +345,9 @@ def handle_users_reply(update,
         'GET_POSITION': get_position,
         'NETWORK_COMMUNICATE': network_communicate,
         'NEXT_CONTACT': next_contact,
+        'CONFIRM_DONATION': confirm_donation,
+        "AWAIT_PAYMENT": await_payment,
+        "CONFIRM_DONATION_CUSTOM": confirm_donation_custom,
         }
     state_handler = states_functions[user_state]
     try:
@@ -258,6 +363,7 @@ def main() -> None:
 
     updater = Updater(TG_BOT_TOKEN)
     dispatcher = updater.dispatcher
+    updater.dispatcher.add_handler(PreCheckoutQueryHandler(pre_checkout_callback))
     dispatcher.add_handler(
         CallbackQueryHandler(handle_users_reply))
     dispatcher.add_handler(
