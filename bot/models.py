@@ -10,6 +10,16 @@ class User(models.Model):
         unique=True,
         db_index=True,
     )
+    tg_nick = models.CharField(
+        'Ник в телеграм',
+        max_length=50,
+        blank=True,
+    )
+    tg_state = models.CharField(
+        'Состояние бота',
+        max_length=50,
+        default='START'
+    )
     name = models.CharField(
         "Имя",
         max_length=50,
@@ -31,10 +41,14 @@ class User(models.Model):
     STATUS_CHOICES = [
         ("PARTICIPANT", "Участник"),
         ("SPEAKER", "Спикер"),
-        ("MANAGER", "Спикер"),
+        ("MANAGER", "Менеджер"),
     ]
     status = models.CharField(
         "Статус", max_length=50, choices=STATUS_CHOICES, default="PARTICIPANT"
+    )
+    active = models.BooleanField(
+        'Готов/не готов к общению',
+        default=False
     )
 
     def __str__(self) -> str:
