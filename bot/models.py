@@ -38,6 +38,10 @@ class User(models.Model):
         choices=STATUS_CHOICES,
         default='PARTICIPANT'
     )
+    active = models.BooleanField(
+        'Готов/не готов к общению',
+        default=False
+    )
 
     def __str__(self) -> str:
         return f'{self.name} - {self.tg_id}'
