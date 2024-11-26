@@ -84,6 +84,9 @@ def get_networking(update: Updater, context: CallbackContext):
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
         return 'CONFIRM_NETWORKING'
+    if not context.bot_data['user'].name:
+        return get_user_info(update, context)
+    return make_networking(update, context)
 
 
 def confirm_networking(update: Updater, context: CallbackContext):
@@ -96,6 +99,45 @@ def confirm_networking(update: Updater, context: CallbackContext):
 
 
 def get_user_info(update: Updater, context: CallbackContext):
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Введите ваше имя'
+    )
+
+    return 'GET_NAME'
+
+
+def get_name(update: Updater, context: CallbackContext):
+    message_text = update.message.text
+    context.bot_data['user'].name = message_text
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Введите название вашей компании'
+    )
+    return 'GET_COMPANY'
+
+
+def get_company(update: Updater, context: CallbackContext):
+    message_text = update.message.text
+    context.bot_data['user'].company = message_text
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Введите вашу должность'
+    )
+    return 'GET_POSITION'
+
+
+def get_position(update: Updater, context: CallbackContext):
+    message_text = update.message.text
+    context.bot_data['user'].position = message_text
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Сейчас я подберу вам собеседника'
+    )
+    return make_networking(update, context)
+
+
+def make_networking(update: Updater, context: CallbackContext):
     pass
 
 
@@ -125,6 +167,9 @@ def handle_users_reply(update,
         'START': start,
         'CHOOSE_ACTION': choose_action,
         'CONFIRM_NETWORKING': confirm_networking,
+        'GET_NAME': get_name,
+        'GET_COMPANY': get_company,
+        'GET_POSITION': get_position,
         }
     state_handler = states_functions[user_state]
     try:
