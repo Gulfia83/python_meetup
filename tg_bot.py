@@ -1,6 +1,8 @@
 import os
 from random import choice
 
+from datetime import date
+
 import django
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
@@ -10,7 +12,10 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'python_meetup.settings')
 django.setup()
 
 from python_meetup.settings import TG_BOT_TOKEN
-from bot.models import User
+
+from bot.models import User, Program, Lecture
+
+from bot_buttons_handler.show_programs import show_program
 
 
 def start(update: Updater, context: CallbackContext):
@@ -39,7 +44,6 @@ def start(update: Updater, context: CallbackContext):
             'Выберите действие:',
             reply_markup=reply_markup,
         )
-    
     return 'CHOOSE_ACTION'
 
 
@@ -60,10 +64,8 @@ def choose_action(update: Updater, context: CallbackContext):
 def get_questions(update: Updater, context: CallbackContext):
     pass
 
-
 def show_program(update: Updater, context: CallbackContext):
     pass
-
 
 def add_question(update: Updater, context: CallbackContext):
     pass
@@ -155,7 +157,6 @@ def make_networking(update: Updater, context: CallbackContext):
         Сейчас нас {active_users_count} человек''',
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-   
     return 'NETWORK_COMMUNICATE'
 
 
@@ -176,7 +177,6 @@ def cancel_networking(update: Updater, context: CallbackContext):
 
 
 def find_contact(update: Updater, context: CallbackContext):
-    
     context.bot_data['networking'] = context.bot_data['user']
     while context.bot_data['networking'] == context.bot_data['user']:
         context.bot_data['networking'] = choice(
@@ -245,7 +245,7 @@ def handle_users_reply(update,
         'GET_COMPANY': get_company,
         'GET_POSITION': get_position,
         'NETWORK_COMMUNICATE': network_communicate,
-        'NEXT_CONTACT': next_contact
+        'NEXT_CONTACT': next_contact,
         }
     state_handler = states_functions[user_state]
     try:
