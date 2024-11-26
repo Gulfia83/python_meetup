@@ -8,6 +8,11 @@ class User(models.Model):
         max_length=50,
         blank=True,
     )
+    tg_nick = models.CharField(
+        'Ник в телеграм',
+        max_length=50,
+        blank=True,
+    )
     tg_state = models.CharField(
         'Состояние бота',
         max_length=50,
