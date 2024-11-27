@@ -50,8 +50,8 @@ class User(models.Model):
         'Готов/не готов к общению',
         default=False
     )
-    active = models.BooleanField(
-        'Готов/не готов к общению',
+    ready_to_questions = models.BooleanField(
+        'Готов/не готов получать вопросы',
         default=False
     )
 
@@ -126,3 +126,33 @@ class Donate(models.Model):
     class Meta:
         verbose_name = ("Донат",)
         verbose_name_plural = "Донаты"
+
+
+class Questions(models.Model):
+    asker = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="От кого",
+        related_name="questions_from"
+    )
+    answerer = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="Кому",
+        related_name="questions_to",
+    )
+    text = models.TextField(
+        "Текст вопроса",
+        blank=True,
+    )
+    asked_at = models.DateTimeField(
+        "Время создания",
+        default=timezone.now()
+    )
+    
+    def __str__(self) -> str:
+        return f"Вопрос {self.answerer.__str__()}"
+
+    class Meta:
+        verbose_name = "Вопрос"
+        verbose_name_plural = "Вопросы"

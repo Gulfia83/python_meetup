@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Donate, Lecture, Program, User
+from .models import Donate, Lecture, Program, User, Questions
 
 
 @admin.register(User)
@@ -31,3 +31,8 @@ class DonateAdmin(admin.ModelAdmin):
         "amount",
         "donated_at",
     )
+
+
+@admin.register(Questions)
+class Admin(admin.ModelAdmin):
+    list_display = ("asker", "answerer", "text", "asked_at")
