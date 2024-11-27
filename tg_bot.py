@@ -254,7 +254,7 @@ def get_position(update: Updater, context: CallbackContext):
 def make_networking(update: Updater, context: CallbackContext):
     active_users_count = User.objects.filter(active=True).count()
     if active_users_count <= 1:
-        text = f'<i><b>{context.bot_data['user'].name}</b></i>, рады видеть вас в нетворкинге.\n\n'
+        text = f'<i><b>{context.bot_data["user"].name}</b></i>, рады видеть вас в нетворкинге.\n\n'
         text += 'Сейчас нет других собеседников. Я уведомлю вас, когда они появятся 🤗'
 
         update.callback_query.message.reply_text(
