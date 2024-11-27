@@ -1,3 +1,4 @@
+from ast import parse
 from email import message
 import os
 from pydoc import text
@@ -105,11 +106,14 @@ def get_questions(update: Updater, context: CallbackContext):
     ]
     text = ""
     for question in questions:
-        text += f"Вопрос от @{question.asker.tg_nick}: {question.text}\n"
+        text += f"Вопрос от @<i><b>{question.asker.tg_nick}</b></i>: {question.text}\n\n"
+
     context.bot.send_message(
         chat_id=user.tg_id,
         text=text,
-        reply_markup=InlineKeyboardMarkup(keyboard))
+        reply_markup=InlineKeyboardMarkup(keyboard),
+        parse_mode=ParseMode.HTML
+        )
     return "HANDLE_START"
 
 
