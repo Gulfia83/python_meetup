@@ -104,7 +104,7 @@ def get_questions(update: Updater, context: CallbackContext):
     ]
     text = ""
     for question in questions:
-        text += f"Вопрос от {question.asker.name}: {question.text}\n"
+        text += f"Вопрос от @{question.asker.tg_nick}: {question.text}\n"
     context.bot.send_message(
         chat_id=user.tg_id,
         text=text,
