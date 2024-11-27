@@ -20,17 +20,6 @@ from python_meetup.settings import TG_BOT_TOKEN, PAY_MASTER_TOKEN
 from bot.models import User, Questions, Donate, Program
 
 
-# @receiver(post_save, sender=User)
-# def notify_new_user(sender, instance, created, **kwargs):
-#     if created:
-#         waiting_users = User.objects.all()
-#         if waiting_users:
-#             bot = Bot(TG_BOT_TOKEN)
-#             for user in waiting_users:
-#                 bot.send_message(chat_id=user.tg_id,
-#                                  text="Новый пользователь зарегистрировался! Теперь вы можете пообщаться.")
-
-
 def start(update: Updater, context: CallbackContext):
     keyboard = [
         [InlineKeyboardButton("Начать лекцию",
@@ -51,50 +40,18 @@ def start(update: Updater, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     if update.message:
         update.message.reply_text(
-            "Добро пожаловать на наше мероприятие" + "\u200b",
+            "Добро пожаловать на наше мероприятие",
             reply_markup=reply_markup,
         )
     elif update.callback_query:
         query = update.callback_query
-        query.edit_message_text(
-            "Выберите действие:"+ "\u200b",
+        query.message.reply_text(
+            "Выберите действие:",
             reply_markup=reply_markup,
         )
 
     return "CHOOSE_ACTION"
 
-
-# def start(update: Updater, context: CallbackContext):
-#     keyboard = [
-#         [InlineKeyboardButton("Начать лекцию",
-#                               callback_data="start_lecture")] if context.bot_data["user"].status == "SPEAKER" else [],
-#         [InlineKeyboardButton('Закончить лекцию',
-#                               callback_data="end_lecture")] if context.bot_data["user"].status == "SPEAKER" else [],
-#         [InlineKeyboardButton('Вопросы ко мне',
-#                               callback_data="my_questions")] if context.bot_data["user"].status == "SPEAKER" else [],
-#         [InlineKeyboardButton("Программа",
-#                               callback_data="show_program"),
-#          InlineKeyboardButton("Задать вопрос спикеру",
-#                               callback_data="add_question")],
-#         [InlineKeyboardButton("Хочу познакомиться",
-#                               callback_data="networking"),
-#          InlineKeyboardButton("Задонатить",
-#                               callback_data="make_donation")],
-#     ]
-#     reply_markup = InlineKeyboardMarkup(keyboard)
-#     if update.message:
-#         update.message.reply_text(
-#             "Добро пожаловать на наше мероприятие",
-#             reply_markup=reply_markup,
-#         )
-#     elif update.callback_query:
-#         query = update.callback_query
-#         query.message.reply_text(
-#             "Выберите действие:",
-#             reply_markup=reply_markup,
-#         )
-
-#     return "CHOOSE_ACTION"
 
 def choose_action(update: Updater, context: CallbackContext):
     data = update.callback_query.data
@@ -114,56 +71,16 @@ def choose_action(update: Updater, context: CallbackContext):
         return get_donation(update, context)
 
 
-
-# def start_lecture(update: Updater, context: CallbackContext):
-#     context.bot_data["user"].ready_to_questions = True
-#     context.bot_data["user"].save
-#     return start(update, context)
-
-
-# def end_lecture(update: Updater, context: CallbackContext):
-#     context.bot_data["user"].ready_to_questions = False
-#     context.bot_data["user"].save
-#     return start(update, context)
-
-
 def start_lecture(update: Updater, context: CallbackContext):
     context.bot_data["user"].ready_to_questions = True
-    context.bot_data["user"].save()
-
-    query = update.callback_query
-    query.edit_message_text(
-        "Лекция началась! Вы можете принимать вопросы." + "\u200b",
-        reply_markup=build_keyboard_for_lecture("end_lecture"),
-    )
-    return "CHOOSE_ACTION"
+    context.bot_data["user"].save
+    return start(update, context)
 
 
 def end_lecture(update: Updater, context: CallbackContext):
     context.bot_data["user"].ready_to_questions = False
-    context.bot_data["user"].save()
-
-    query = update.callback_query
-    query.edit_message_text(
-        "Лекция завершена! Больше не принимаются вопросы." + "\u200b",
-        reply_markup=build_keyboard_for_lecture("start_lecture"),
-    )
-    return "CHOOSE_ACTION"
-
-
-def build_keyboard_for_lecture(action):
-    if action == "start_lecture":
-        return InlineKeyboardMarkup([
-            [InlineKeyboardButton("Начать лекцию", callback_data="start_lecture")],
-            [InlineKeyboardButton("Закончить лекцию", callback_data="end_lecture")],
-            [InlineKeyboardButton("Вопросы ко мне", callback_data="my_questions")],
-        ])
-    else:
-        return InlineKeyboardMarkup([
-            [InlineKeyboardButton("Начать лекцию", callback_data="start_lecture")],
-            [InlineKeyboardButton("Закончить лекцию", callback_data="end_lecture")],
-            [InlineKeyboardButton("Вопросы ко мне", callback_data="my_questions")],
-        ])
+    context.bot_data["user"].save
+    return start(update, context)
 
 
 def get_questions(update: Updater, context: CallbackContext):
@@ -262,8 +179,8 @@ def get_networking(update: Updater, context: CallbackContext):
             [InlineKeyboardButton("Главное меню",
                                   callback_data="to_start")]
         ]
-        query = update.callback_query
-        query.edit_message_text(
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
             text='''Вы можете пообщаться с другими участниками! Для этого\n
             нужно заполнить анкету и я подберу вам собеседника.\n
             Подтвердите участие.''',
@@ -324,13 +241,12 @@ def get_position(update: Updater, context: CallbackContext):
 
 
 def make_networking(update: Updater, context: CallbackContext):
-    query = update.callback_query
     active_users_count = User.objects.filter(active=True).count()
     if active_users_count <= 1:
         text = f'<i><b>{context.bot_data["user"].name}</b></i>, рады видеть вас в нетворкинге.\n\n'
         text += 'Сейчас нет других собеседников. Я уведомлю вас, когда они появятся 🤗'
 
-        query.edit_message_text(
+        update.callback_query.message.reply_text(
         text,
         reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Главное меню", callback_data="to_start")]]
@@ -347,7 +263,8 @@ def make_networking(update: Updater, context: CallbackContext):
         [InlineKeyboardButton("Главное меню",
                               callback_data="to_start")]
     ]
-    query.edit_message_text(
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
         text=f'''
         {context.bot_data['user'].name}, рады видеть вас в нетворкинге.
         Сейчас нас {active_users_count} человек''',
