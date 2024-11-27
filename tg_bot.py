@@ -20,15 +20,15 @@ from python_meetup.settings import TG_BOT_TOKEN, PAY_MASTER_TOKEN
 from bot.models import User, Questions, Donate, Program
 
 
-@receiver(post_save, sender=User)
-def notify_new_user(sender, instance, created, **kwargs):
-    if created:
-        waiting_users = User.objects.all()
-        if waiting_users:
-            bot = Bot(TG_BOT_TOKEN)
-            for user in waiting_users:
-                bot.send_message(chat_id=user.tg_id,
-                                 text="Новый пользователь зарегистрировался! Теперь вы можете пообщаться.")
+# @receiver(post_save, sender=User)
+# def notify_new_user(sender, instance, created, **kwargs):
+#     if created:
+#         waiting_users = User.objects.all()
+#         if waiting_users:
+#             bot = Bot(TG_BOT_TOKEN)
+#             for user in waiting_users:
+#                 bot.send_message(chat_id=user.tg_id,
+#                                  text="Новый пользователь зарегистрировался! Теперь вы можете пообщаться.")
 
 
 def start(update: Updater, context: CallbackContext):
@@ -208,7 +208,7 @@ def confirm_networking(update: Updater, context: CallbackContext):
         return start(update, context)
     elif update.callback_query.data == "confirm":
         context.bot_data["user"].active = True
-        context.bot_data["user"].save()
+        context.bot_data["user"].save(update_fields=["active"])
         return get_networking(update, context)
 
 

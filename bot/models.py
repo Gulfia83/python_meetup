@@ -1,6 +1,8 @@
 from django.db import models
 from django.utils import timezone
 from python_meetup.settings import TG_BOT_TOKEN
+from telegram import Bot
+
 
 class User(models.Model):
     tg_id = models.CharField(
@@ -61,6 +63,18 @@ class User(models.Model):
     class Meta:
         verbose_name = ("Участник",)
         verbose_name_plural = "Участники"
+
+
+    def send_about_new_user(self):
+        bot = Bot(token=TG_BOT_TOKEN)
+        users = User.objects.filter(active=True).count()
+        if users == 2:
+            users_active = User.objects.filter(ready_to_questions=True)
+            for user in users_active:
+                try:
+                    bot.send_message(chat_id=user.tg_id, text="Новый пользователь зарегистрировался! Теперь вы можете пообщаться.")
+                except Exception as e:
+                    print(f"Ошибка при отправке сообщения пользователю {user.tg_id}: {e}")
 
 
 class Lecture(models.Model):
@@ -172,8 +186,6 @@ class Letters(models.Model):
         verbose_name_plural = "Рассылки"
 
     def send_to_all_users(self):
-        from telegram import Bot
-        from bot.models import User
         bot = Bot(token=TG_BOT_TOKEN)
 
         users = User.objects.all()
