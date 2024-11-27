@@ -6,6 +6,8 @@ from datetime import date
 
 import django
 from django.utils.timezone import now
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, \
     LabeledPrice, ParseMode, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
@@ -22,6 +24,16 @@ from bot_buttons_handler.show_programs import show_program
 from bot_buttons_handler.donate import get_donation, confirm_donation, \
     confirm_donation_custom, pre_checkout_callback, await_payment
 
+
+@receiver(post_save, sender=User)
+def notify_new_user(sender, instance, created, **kwargs):
+    if created:
+        waiting_users = User.objects.all()
+        if waiting_users:
+            bot = Bot(TG_BOT_TOKEN)
+            for user in waiting_users:
+                bot.send_message(chat_id=user.tg_id,
+                                 text="Новый пользователь зарегистрировался! Теперь вы можете пообщаться.")
 
 
 def start(update: Updater, context: CallbackContext):
@@ -214,6 +226,18 @@ def get_position(update: Updater, context: CallbackContext):
 
 def make_networking(update: Updater, context: CallbackContext):
     active_users_count = User.objects.filter(active=True).count()
+    if active_users_count <= 1:
+        keyboard = [
+            [InlineKeyboardButton('Главное меню', callback_data='to_start')]
+            ]
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f'''
+            {context.bot_data['user'].name}, рады видеть вас в нетворкинге.
+            Сейчас нет других собеседников. Я уведомлю вас, когда они появятся''',
+            reply_markup=InlineKeyboardMarkup(keyboard)
+            )
+        return 'NETWORK_COMMUNICATE'
     keyboard = [
         [InlineKeyboardButton('Познакомиться',
                               callback_data='find_contact')] if active_users_count > 1 else [],
