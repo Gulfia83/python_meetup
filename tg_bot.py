@@ -51,18 +51,50 @@ def start(update: Updater, context: CallbackContext):
     reply_markup = InlineKeyboardMarkup(keyboard)
     if update.message:
         update.message.reply_text(
-            "Добро пожаловать на наше мероприятие",
+            "Добро пожаловать на наше мероприятие" + "\u200b",
             reply_markup=reply_markup,
         )
     elif update.callback_query:
         query = update.callback_query
         query.edit_message_text(
-            "Выберите действие:",
+            "Выберите действие:"+ "\u200b",
             reply_markup=reply_markup,
         )
 
     return "CHOOSE_ACTION"
 
+
+# def start(update: Updater, context: CallbackContext):
+#     keyboard = [
+#         [InlineKeyboardButton("Начать лекцию",
+#                               callback_data="start_lecture")] if context.bot_data["user"].status == "SPEAKER" else [],
+#         [InlineKeyboardButton('Закончить лекцию',
+#                               callback_data="end_lecture")] if context.bot_data["user"].status == "SPEAKER" else [],
+#         [InlineKeyboardButton('Вопросы ко мне',
+#                               callback_data="my_questions")] if context.bot_data["user"].status == "SPEAKER" else [],
+#         [InlineKeyboardButton("Программа",
+#                               callback_data="show_program"),
+#          InlineKeyboardButton("Задать вопрос спикеру",
+#                               callback_data="add_question")],
+#         [InlineKeyboardButton("Хочу познакомиться",
+#                               callback_data="networking"),
+#          InlineKeyboardButton("Задонатить",
+#                               callback_data="make_donation")],
+#     ]
+#     reply_markup = InlineKeyboardMarkup(keyboard)
+#     if update.message:
+#         update.message.reply_text(
+#             "Добро пожаловать на наше мероприятие",
+#             reply_markup=reply_markup,
+#         )
+#     elif update.callback_query:
+#         query = update.callback_query
+#         query.message.reply_text(
+#             "Выберите действие:",
+#             reply_markup=reply_markup,
+#         )
+
+#     return "CHOOSE_ACTION"
 
 def choose_action(update: Updater, context: CallbackContext):
     data = update.callback_query.data
@@ -82,16 +114,56 @@ def choose_action(update: Updater, context: CallbackContext):
         return get_donation(update, context)
 
 
+
+# def start_lecture(update: Updater, context: CallbackContext):
+#     context.bot_data["user"].ready_to_questions = True
+#     context.bot_data["user"].save
+#     return start(update, context)
+
+
+# def end_lecture(update: Updater, context: CallbackContext):
+#     context.bot_data["user"].ready_to_questions = False
+#     context.bot_data["user"].save
+#     return start(update, context)
+
+
 def start_lecture(update: Updater, context: CallbackContext):
     context.bot_data["user"].ready_to_questions = True
-    context.bot_data["user"].save
-    return start(update, context)
+    context.bot_data["user"].save()
+
+    query = update.callback_query
+    query.edit_message_text(
+        "Лекция началась! Вы можете принимать вопросы." + "\u200b",
+        reply_markup=build_keyboard_for_lecture("end_lecture"),
+    )
+    return "CHOOSE_ACTION"
 
 
 def end_lecture(update: Updater, context: CallbackContext):
     context.bot_data["user"].ready_to_questions = False
-    context.bot_data["user"].save
-    return start(update, context)
+    context.bot_data["user"].save()
+
+    query = update.callback_query
+    query.edit_message_text(
+        "Лекция завершена! Больше не принимаются вопросы." + "\u200b",
+        reply_markup=build_keyboard_for_lecture("start_lecture"),
+    )
+    return "CHOOSE_ACTION"
+
+
+def build_keyboard_for_lecture(action):
+    if action == "start_lecture":
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("Начать лекцию", callback_data="start_lecture")],
+            [InlineKeyboardButton("Закончить лекцию", callback_data="end_lecture")],
+            [InlineKeyboardButton("Вопросы ко мне", callback_data="my_questions")],
+        ])
+    else:
+        return InlineKeyboardMarkup([
+            [InlineKeyboardButton("Начать лекцию", callback_data="start_lecture")],
+            [InlineKeyboardButton("Закончить лекцию", callback_data="end_lecture")],
+            [InlineKeyboardButton("Вопросы ко мне", callback_data="my_questions")],
+        ])
 
 
 def get_questions(update: Updater, context: CallbackContext):
