@@ -17,8 +17,8 @@ def get_donation(update: Updater, context: CallbackContext):
         [InlineKeyboardButton('Ввести свою сумму', callback_data='user_donate')],
         [InlineKeyboardButton('Назад', callback_data='to_start')],
     ]
-    context.bot.send_message(
-        chat_id=update.effective_chat.id,
+    query = update.callback_query
+    query.edit_message_text(
         text="Вы можете помочь нам финансово. Выберите сумму доната:",
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
@@ -32,7 +32,7 @@ def confirm_donation(update: Updater, context: CallbackContext):
     chat_id = query.message.chat_id
 
     if update.callback_query.data == 'to_start':
-        return "START"
+        return start(update, context)
     if update.callback_query.data == 'user_donate':
         return user_sum_for_donate(update, context)
 
