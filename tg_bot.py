@@ -123,6 +123,12 @@ def waiting_question(update: Updater, context: CallbackContext):
     question_text = update.message.text
     asker = context.bot_data['user']
     answerer = User.objects.filter(ready_to_questions=True).first()
+    if not answerer:
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text='К сожалению сейчас некому задать вопрос.\nДождитесь следующего спикера'
+        )
+        return start(update, context)
     new_question = Questions.objects.create(
         asker=asker,
         answerer=answerer,
@@ -133,6 +139,7 @@ def waiting_question(update: Updater, context: CallbackContext):
         chat_id=update.effective_chat.id,
         text='Ваш вопрос успешно отправлен'
     )
+    
     return start(update, context)
 
 
