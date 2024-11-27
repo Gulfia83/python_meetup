@@ -56,7 +56,7 @@ def start(update: Updater, context: CallbackContext):
         )
     elif update.callback_query:
         query = update.callback_query
-        query.message.reply_text(
+        query.edit_message_text(
             "Выберите действие:",
             reply_markup=reply_markup,
         )
@@ -190,8 +190,8 @@ def get_networking(update: Updater, context: CallbackContext):
             [InlineKeyboardButton("Главное меню",
                                   callback_data="to_start")]
         ]
-        context.bot.send_message(
-            chat_id=update.effective_chat.id,
+        query = update.callback_query
+        query.edit_message_text(
             text='''Вы можете пообщаться с другими участниками! Для этого\n
             нужно заполнить анкету и я подберу вам собеседника.\n
             Подтвердите участие.''',
@@ -252,12 +252,13 @@ def get_position(update: Updater, context: CallbackContext):
 
 
 def make_networking(update: Updater, context: CallbackContext):
+    query = update.callback_query
     active_users_count = User.objects.filter(active=True).count()
     if active_users_count <= 1:
         text = f'<i><b>{context.bot_data["user"].name}</b></i>, рады видеть вас в нетворкинге.\n\n'
         text += 'Сейчас нет других собеседников. Я уведомлю вас, когда они появятся 🤗'
 
-        update.callback_query.message.reply_text(
+        query.edit_message_text(
         text,
         reply_markup=InlineKeyboardMarkup(
             [[InlineKeyboardButton("Главное меню", callback_data="to_start")]]
@@ -274,8 +275,7 @@ def make_networking(update: Updater, context: CallbackContext):
         [InlineKeyboardButton("Главное меню",
                               callback_data="to_start")]
     ]
-    context.bot.send_message(
-        chat_id=update.effective_chat.id,
+    query.edit_message_text(
         text=f'''
         {context.bot_data['user'].name}, рады видеть вас в нетворкинге.
         Сейчас нас {active_users_count} человек''',
