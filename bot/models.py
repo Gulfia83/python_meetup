@@ -167,6 +167,10 @@ class Letters(models.Model):
     def __str__(self):
         return self.title
 
+    class Meta:
+        verbose_name = ("Рассылка",)
+        verbose_name_plural = "Рассылки"
+
     def send_to_all_users(self):
         from telegram import Bot
         from bot.models import User
