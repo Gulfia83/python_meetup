@@ -1,5 +1,6 @@
 from email import message
 import os
+from pydoc import text
 from random import choice
 
 from datetime import date
@@ -252,17 +253,18 @@ def get_position(update: Updater, context: CallbackContext):
 def make_networking(update: Updater, context: CallbackContext):
     active_users_count = User.objects.filter(active=True).count()
     if active_users_count <= 1:
-        keyboard = [
-            [InlineKeyboardButton("Главное меню", callback_data="to_start")]
-            ]
-        context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f'''
-            {context.bot_data['user'].name}, рады видеть вас в нетворкинге.
-            Сейчас нет других собеседников. Я уведомлю вас, когда они появятся''',
-            reply_markup=InlineKeyboardMarkup(keyboard)
-            )
+        text = f'<i><b>{context.bot_data['user'].name}</b></i>, рады видеть вас в нетворкинге.\n\n'
+        text += 'Сейчас нет других собеседников. Я уведомлю вас, когда они появятся 🤗'
+
+        update.callback_query.message.reply_text(
+        text,
+        reply_markup=InlineKeyboardMarkup(
+            [[InlineKeyboardButton("Главное меню", callback_data="to_start")]]
+        ),
+        parse_mode=ParseMode.HTML,
+        )
         return "HANDLE_START"
+
     keyboard = [
         [InlineKeyboardButton("Познакомиться",
                               callback_data="find_contact")] if active_users_count > 1 else [],
@@ -376,7 +378,7 @@ def confirm_donation(update: Updater, context: CallbackContext):
             prices=prices,
             start_parameter="donation",
         )
-        return "START"
+        return "CHOOSE_ACTION"
 
     if data == "to_start":
         return start(update, context)
@@ -408,7 +410,7 @@ def confirm_donation_custom(update: Updater, context: CallbackContext):
         prices=prices,
         start_parameter="donation",
         )
-    return "START"
+    return "CHOOSE_ACTION"
 
 
 def pre_checkout_callback(update: Updater, context: CallbackContext):
