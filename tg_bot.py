@@ -1,7 +1,4 @@
-from ast import parse
-from email import message
 import os
-from pydoc import text
 from random import choice
 
 from datetime import date
@@ -11,7 +8,7 @@ from django.utils.timezone import now
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, \
-    LabeledPrice, ParseMode, ReplyKeyboardMarkup
+    LabeledPrice, ParseMode
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
       CallbackContext, CallbackQueryHandler, PreCheckoutQueryHandler
 

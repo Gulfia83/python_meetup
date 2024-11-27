@@ -1,6 +1,6 @@
 from django.db import models
 from django.utils import timezone
-
+from python_meetup.settings import TG_BOT_TOKEN
 
 class User(models.Model):
     tg_id = models.CharField(
@@ -149,10 +149,36 @@ class Questions(models.Model):
         "Время создания",
         default=timezone.now()
     )
-    
+
     def __str__(self) -> str:
         return f"Вопрос {self.answerer.__str__()}"
 
     class Meta:
         verbose_name = "Вопрос"
         verbose_name_plural = "Вопросы"
+
+
+class Letters(models.Model):
+    title = models.CharField(max_length=255)
+    message = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.title
+
+    def send_to_all_users(self):
+        from telegram import Bot
+        from bot.models import User
+        bot = Bot(token=TG_BOT_TOKEN)
+
+        users = User.objects.all()
+
+        for user in users:
+            try:
+                bot.send_message(chat_id=user.tg_id, text=self.message)
+            except Exception as e:
+                print(f"Ошибка при отправке сообщения пользователю {user.tg_id}: {e}")
+
+        self.sent_at = timezone.now()
+        self.save()
