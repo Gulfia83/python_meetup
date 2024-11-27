@@ -111,7 +111,29 @@ def handle_questions(update: Updater, context: CallbackContext):
 
 
 def add_question(update: Updater, context: CallbackContext):
-    pass
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Введите ваш вопрос'
+    )
+
+    return 'WAITING_QUESTION'
+
+
+def waiting_question(update: Updater, context: CallbackContext):
+    question_text = update.message.text
+    asker = context.bot_data['user']
+    answerer = User.objects.filter(ready_to_questions=True).first()
+    new_question = Questions.objects.create(
+        asker=asker,
+        answerer=answerer,
+        text=question_text
+        )
+    new_question.save()
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text='Ваш вопрос успешно отправлен'
+    )
+    return start(update, context)
 
 
 def get_networking(update: Updater, context: CallbackContext):
@@ -289,6 +311,7 @@ def handle_users_reply(update,
         "CONFIRM_DONATION_CUSTOM": confirm_donation_custom,
         "AWAIT_PAYMENT": await_payment,
         "HANDLE_QUESTIONS": handle_questions,
+        "WAITING_QUESTION": waiting_question,
         }
     state_handler = states_functions[user_state]
     try:
