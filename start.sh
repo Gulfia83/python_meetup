@@ -3,7 +3,7 @@
 if [ "$1" == "web" ]; then
   python manage.py migrate --noinput
 
-    python manage.py createsuperuser --noinput \
+  python manage.py createsuperuser \
     --username root \
     --email admin@example.com \
     --password root
