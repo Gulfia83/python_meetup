@@ -6,7 +6,8 @@ from datetime import date
 
 import django
 from django.utils.timezone import now
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice, ParseMode
+from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, \
+    LabeledPrice, ParseMode, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
       CallbackContext, CallbackQueryHandler, PreCheckoutQueryHandler
 
@@ -15,16 +16,21 @@ django.setup()
 
 from python_meetup.settings import TG_BOT_TOKEN, PAY_MASTER_TOKEN
 
-from bot.models import Donate, User, Program, Lecture
+from bot.models import User, Questions
 
 from bot_buttons_handler.show_programs import show_program
-from bot_buttons_handler.donate import get_donation, confirm_donation, user_sum_for_donate,confirm_donation_custom, pre_checkout_callback, await_payment
+from bot_buttons_handler.donate import get_donation, confirm_donation, \
+    confirm_donation_custom, pre_checkout_callback, await_payment
 
 
 
 def start(update: Updater, context: CallbackContext):
 
     keyboard = [
+        [InlineKeyboardButton('Начать лекцию',
+                              callback_data='start_lecture')] if context.bot_data['user'].status == 'SPEAKER' else [],
+        [InlineKeyboardButton('Закончить лекцию',
+                              callback_data='end_lecture')] if context.bot_data['user'].status == 'SPEAKER' else [],
         [InlineKeyboardButton('Вопросы ко мне',
                               callback_data='my_questions')] if context.bot_data['user'].status == 'SPEAKER' else [],
         [InlineKeyboardButton('Программа',
@@ -53,7 +59,11 @@ def start(update: Updater, context: CallbackContext):
 
 def choose_action(update: Updater, context: CallbackContext):
     data = update.callback_query.data
-    if data == 'my_questions':
+    if data == 'start_lecture':
+        return start_lecture(update, context)
+    elif data == 'end_lecture':
+        return end_lecture(update, context)
+    elif data == 'my_questions':
         return get_questions(update, context)
     elif data == 'show_program':
         return show_program(update, context)
@@ -65,8 +75,40 @@ def choose_action(update: Updater, context: CallbackContext):
         return get_donation(update, context)
 
 
+def start_lecture(update: Updater, context: CallbackContext):
+    context.bot_data['user'].ready_to_questions = True
+    context.bot_data['user'].save
+    return start(update, context)
+
+
+def end_lecture(update: Updater, context: CallbackContext):
+    context.bot_data['user'].ready_to_questions = False
+    context.bot_data['user'].save
+    return start(update, context)
+
+
 def get_questions(update: Updater, context: CallbackContext):
-    pass
+    user = context.bot_data['user']
+
+    questions = Questions.objects.filter(answerer=user)
+    keyboard = [
+        [InlineKeyboardButton('Главное меню', callback_data='to_start')],
+    ]
+    text = ""
+    for question in questions:
+        text += f"Вопрос от {question.asker.name}: {question.text}\n"
+    context.bot.send_message(
+        chat_id=user.tg_id,
+        text=text,
+        reply_markup=InlineKeyboardMarkup(keyboard))
+    return "HANDLE_QUESTIONS"
+
+
+def handle_questions(update: Updater, context: CallbackContext):
+    data = update.callback_query.data
+    if data == 'to_start':
+        return start(update, context)
+
 
 def add_question(update: Updater, context: CallbackContext):
     pass
@@ -245,7 +287,8 @@ def handle_users_reply(update,
         'NEXT_CONTACT': next_contact,
         'CONFIRM_DONATION': confirm_donation,
         "CONFIRM_DONATION_CUSTOM": confirm_donation_custom,
-        "AWAIT_PAYMENT": await_payment
+        "AWAIT_PAYMENT": await_payment,
+        "HANDLE_QUESTIONS": handle_questions,
         }
     state_handler = states_functions[user_state]
     try:
