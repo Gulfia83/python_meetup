@@ -192,11 +192,6 @@ def waiting_question(update: Updater, context: CallbackContext):
         chat_id=update.effective_chat.id,
         text="Ваш вопрос успешно отправлен"
     )
-    message = update.effective_message
-    context.bot.delete_message(
-        chat_id=message.chat_id,
-        message_id=message.message_id
-    )
     return start(update, context)
 
 
@@ -295,15 +290,15 @@ def make_networking(update: Updater, context: CallbackContext):
         text = f'<i><b>{context.bot_data["user"].name}</b></i>, рады видеть вас в нетворкинге.\n\n'
         text += 'Сейчас нет других собеседников. Я уведомлю вас, когда они появятся 🤗'
 
-        update.callback_query.message.reply_text(
-            text,
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=text,
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("Главное меню", callback_data="to_start")]]
                 ),
             parse_mode=ParseMode.HTML,
             )
-        
-        
+   
         return "HANDLE_START"
 
     keyboard = [
@@ -321,11 +316,7 @@ def make_networking(update: Updater, context: CallbackContext):
         Сейчас нас {active_users_count} человек''',
         reply_markup=InlineKeyboardMarkup(keyboard)
     )
-    message = update.effective_message
-    context.bot.delete_message(
-        chat_id=message.chat_id,
-        message_id=message.message_id
-    )
+    
     return "NETWORK_COMMUNICATE"
 
 
