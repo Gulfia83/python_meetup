@@ -493,7 +493,7 @@ def make_application(update: Updater, context: CallbackContext):
         text='''Если вы хотите принять участие в качестве спикера на\n
         следующем мероприятии, напишите тему вашего доклада'''
         )
-    
+
     return "WAITING_APPLICATION"
 
 
@@ -509,11 +509,17 @@ def waiting_application(update: Updater, context: CallbackContext):
         chat_id=update.effective_chat.id,
         text="Ваша заявка успешно отправлена"
     )
-    
+
     return start(update, context)
 
 
 def get_notifications(update: Updater, context: CallbackContext):
+    if context.bot_data["user"].get_notifications == True:
+        context.bot.send_message(
+            chat_id=update.effective_chat.id,
+            text=f"Вы уже подписаны на рассылку!"
+        )
+        return start(update, context)
     context.bot_data["user"].get_notifications = True
     context.bot_data["user"].save
     context.bot.send_message(
