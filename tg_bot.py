@@ -5,9 +5,7 @@ from datetime import date
 
 import django
 from django.utils.timezone import now
-from django.db.models.signals import post_save
-from django.dispatch import receiver
-from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, \
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, \
     LabeledPrice, ParseMode
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
       CallbackContext, CallbackQueryHandler, PreCheckoutQueryHandler
@@ -47,11 +45,20 @@ def start(update: Updater, context: CallbackContext):
             "Добро пожаловать на наше мероприятие",
             reply_markup=reply_markup,
         )
+        message = update.effective_message
+        context.bot.delete_message(
+            chat_id=message.chat_id,
+            message_id=update.message.message_id
+        )
     elif update.callback_query:
         query = update.callback_query
         query.message.reply_text(
             "Выберите действие:",
             reply_markup=reply_markup,
+        )
+        context.bot.delete_message(
+            chat_id=query.message.chat_id,
+            message_id=query.message.message_id
         )
 
     return "CHOOSE_ACTION"
@@ -108,6 +115,11 @@ def get_questions(update: Updater, context: CallbackContext):
         reply_markup=InlineKeyboardMarkup(keyboard),
         parse_mode=ParseMode.HTML
         )
+    message = update.effective_message
+    context.bot.delete_message(
+        chat_id=message.chat_id,
+        message_id=message.message_id
+    )
     return "HANDLE_START"
 
 
@@ -151,6 +163,11 @@ def add_question(update: Updater, context: CallbackContext):
         chat_id=update.effective_chat.id,
         text="Введите ваш вопрос"
     )
+    message = update.effective_message
+    context.bot.delete_message(
+        chat_id=message.chat_id,
+        message_id=message.message_id
+    )
 
     return "WAITING_QUESTION"
 
@@ -175,7 +192,11 @@ def waiting_question(update: Updater, context: CallbackContext):
         chat_id=update.effective_chat.id,
         text="Ваш вопрос успешно отправлен"
     )
-
+    message = update.effective_message
+    context.bot.delete_message(
+        chat_id=message.chat_id,
+        message_id=message.message_id
+    )
     return start(update, context)
 
 
@@ -194,6 +215,7 @@ def get_networking(update: Updater, context: CallbackContext):
             Подтвердите участие.''',
             reply_markup=InlineKeyboardMarkup(keyboard)
         )
+
         return "CONFIRM_NETWORKING"
     if not context.bot_data["user"].name:
         return get_user_info(update, context)
@@ -214,7 +236,11 @@ def get_user_info(update: Updater, context: CallbackContext):
         chat_id=update.effective_chat.id,
         text="Введите ваше имя"
     )
-
+    message = update.effective_message
+    context.bot.delete_message(
+        chat_id=message.chat_id,
+        message_id=message.message_id
+    )
     return "GET_NAME"
 
 
@@ -224,6 +250,11 @@ def get_name(update: Updater, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text="Введите название вашей компании"
+    )
+    message = update.effective_message
+    context.bot.delete_message(
+        chat_id=message.chat_id,
+        message_id=message.message_id
     )
     return "GET_COMPANY"
 
@@ -235,6 +266,11 @@ def get_company(update: Updater, context: CallbackContext):
         chat_id=update.effective_chat.id,
         text="Введите вашу должность"
     )
+    message = update.effective_message
+    context.bot.delete_message(
+        chat_id=message.chat_id,
+        message_id=message.message_id
+    )
     return "GET_POSITION"
 
 
@@ -244,6 +280,11 @@ def get_position(update: Updater, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text="Сейчас я подберу вам собеседника"
+    )
+    message = update.effective_message
+    context.bot.delete_message(
+        chat_id=message.chat_id,
+        message_id=message.message_id
     )
     return make_networking(update, context)
 
@@ -255,12 +296,14 @@ def make_networking(update: Updater, context: CallbackContext):
         text += 'Сейчас нет других собеседников. Я уведомлю вас, когда они появятся 🤗'
 
         update.callback_query.message.reply_text(
-        text,
-        reply_markup=InlineKeyboardMarkup(
-            [[InlineKeyboardButton("Главное меню", callback_data="to_start")]]
-        ),
-        parse_mode=ParseMode.HTML,
-        )
+            text,
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton("Главное меню", callback_data="to_start")]]
+                ),
+            parse_mode=ParseMode.HTML,
+            )
+        
+        
         return "HANDLE_START"
 
     keyboard = [
@@ -277,6 +320,11 @@ def make_networking(update: Updater, context: CallbackContext):
         {context.bot_data['user'].name}, рады видеть вас в нетворкинге.
         Сейчас нас {active_users_count} человек''',
         reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    message = update.effective_message
+    context.bot.delete_message(
+        chat_id=message.chat_id,
+        message_id=message.message_id
     )
     return "NETWORK_COMMUNICATE"
 
@@ -301,7 +349,9 @@ def find_contact(update: Updater, context: CallbackContext):
     context.bot_data["networking"] = context.bot_data["user"]
     while context.bot_data["networking"] == context.bot_data["user"]:
         context.bot_data["networking"] = choice(
-            User.objects.filter(active=True).exclude(tg_id=update.effective_chat.id)
+            User.objects.filter(active=True).exclude(
+                tg_id=update.effective_chat.id
+                )
         )
 
     keyboard = [
@@ -319,6 +369,11 @@ def find_contact(update: Updater, context: CallbackContext):
         @{context.bot_data['networking'].tg_nick}
         ''',
         reply_markup=InlineKeyboardMarkup(keyboard)
+    )
+    message = update.effective_message
+    context.bot.delete_message(
+        chat_id=message.chat_id,
+        message_id=message.message_id
     )
     return "NEXT_CONTACT"
 
@@ -387,7 +442,7 @@ def user_sum_for_donate(update: Updater, context: CallbackContext):
         chat_id=update.effective_chat.id,
         text="Введите желаемую сумму пожертования"
     )
-
+    
     return "CONFIRM_DONATION_CUSTOM"
 
 
@@ -444,9 +499,10 @@ def successful_payment_callback(update: Updater, context: CallbackContext):
 def make_application(update: Updater, context: CallbackContext):
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text="Если вы хотите приянть участие в качестве спикера\n на следующем мероприятии, напишите\n тему вашего доклада"
-    )
-
+        text='''Если вы хотите принять участие в качестве спикера на\n
+        следующем мероприятии, напишите тему вашего доклада'''
+        )
+    
     return "WAITING_APPLICATION"
 
 
@@ -462,7 +518,7 @@ def waiting_application(update: Updater, context: CallbackContext):
         chat_id=update.effective_chat.id,
         text="Ваша заявка успешно отправлена"
     )
-
+    
     return start(update, context)
 
 
@@ -473,6 +529,7 @@ def get_notifications(update: Updater, context: CallbackContext):
         chat_id=update.effective_chat.id,
         text=f"Вы подписались на нашу рассылку! Мы уведомим вас о датах следующих мероприятий!"
     )
+    
     return start(update, context)
 
 
@@ -522,8 +579,6 @@ def handle_users_reply(update,
 
 
 def main() -> None:
-    bot = Bot(TG_BOT_TOKEN)
-
     updater = Updater(TG_BOT_TOKEN)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(PreCheckoutQueryHandler(pre_checkout_callback))
