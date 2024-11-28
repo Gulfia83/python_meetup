@@ -68,7 +68,6 @@ class User(models.Model):
         verbose_name = ("Участник",)
         verbose_name_plural = "Участники"
 
-
     def send_about_new_user(self):
         bot = Bot(token=TG_BOT_TOKEN)
         users = User.objects.filter(active=True).count()
@@ -236,7 +235,18 @@ class Application(models.Model):
         'Принята/отклонена',
         default=False
     )
-    
+
+    def send_accept(self, user):
+        bot = Bot(token=TG_BOT_TOKEN)
+        user = self.applicant
+        try:
+            bot.send_message(
+                chat_id=user.tg_id,
+                text="Ваша заявка на участие одобрена!"
+                )
+        except Exception as e:
+            print(f"Ошибка при отправке сообщения пользователю {user.tg_id}: {e}")
+
     def __str__(self):
         return f"Заявка от {self.applicant.__str__()}"
 
