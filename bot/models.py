@@ -56,6 +56,10 @@ class User(models.Model):
         'Готов/не готов получать вопросы',
         default=False
     )
+    get_notifications = models.BooleanField(
+        'Получать рассылку',
+        default=False
+    )
 
     def __str__(self) -> str:
         return f"{self.name} - {self.tg_id}"
@@ -109,9 +113,25 @@ class Lecture(models.Model):
 class Program(models.Model):
     name = models.CharField("Название программы", max_length=255)
     lectures = models.ManyToManyField(
-        Lecture, related_name="programs", verbose_name="Лекции"
+        Lecture,
+        related_name="programs",
+        verbose_name="Лекции",
+        blank=True
     )
     date = models.DateField("Дата проведения программы", blank=True, null=True)
+
+    def send_program(self):
+        bot = Bot(token=TG_BOT_TOKEN)
+
+        users = User.objects.filter(get_notifications=True)
+
+        for user in users:
+            try:
+                bot.send_message(
+                    chat_id=user.tg_id,
+                    text=f"Сообщаем вам, что {self.date} будет проходить мероприятие '{self.name}'. Ждем вас!")
+            except Exception as e:
+                print(f"Ошибка при отправке сообщения пользователю {user.tg_id}: {e}")
 
     def __str__(self) -> str:
         return f"Программа - {self.name}"
@@ -198,3 +218,28 @@ class Letters(models.Model):
 
         self.sent_at = timezone.now()
         self.save()
+
+
+class Application(models.Model):
+    applicant = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        verbose_name="От кого",
+        related_name="application_from",
+    )
+    message = models.TextField(
+        "Текст заявки",
+        blank=True
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    accepted = models.BooleanField(
+        'Принята/отклонена',
+        default=False
+    )
+    
+    def __str__(self):
+        return f"Заявка от {self.applicant.__str__()}"
+
+    class Meta:
+        verbose_name = ("Заявка",)
+        verbose_name_plural = "Заявки"

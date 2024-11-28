@@ -1,5 +1,6 @@
 from django.contrib import admin
-from .models import Donate, Lecture, Letters, Program, User, Questions, Letters
+from .models import Donate, Lecture, Letters, Program, User, Questions, \
+    Letters, Application
 
 
 @admin.register(User)
@@ -34,10 +35,15 @@ class DonateAdmin(admin.ModelAdmin):
 
 
 @admin.register(Questions)
-class Admin(admin.ModelAdmin):
+class QuestionAdmin(admin.ModelAdmin):
     list_display = ("asker", "answerer", "text", "asked_at")
 
 
 @admin.register(Letters)
 class LetterAdmin(admin.ModelAdmin):
     list_display = ("title", "message", "sent_at")
+
+
+@admin.register(Application)
+class ApplitionAdmin(admin.ModelAdmin):
+    list_display = ("applicant", "created_at", "accepted")
