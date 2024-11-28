@@ -17,14 +17,14 @@ django.setup()
 
 from python_meetup.settings import TG_BOT_TOKEN, PAY_MASTER_TOKEN
 
-from bot.models import User, Questions, Donate, Program
+from bot.models import User, Questions, Donate, Program, Application
 
 
 def start(update: Updater, context: CallbackContext):
     keyboard = [
         [InlineKeyboardButton("Начать лекцию",
-                              callback_data="start_lecture")] if context.bot_data["user"].status == "SPEAKER" else [],
-        [InlineKeyboardButton('Закончить лекцию',
+                              callback_data="start_lecture"),
+         InlineKeyboardButton('Закончить лекцию',
                               callback_data="end_lecture")] if context.bot_data["user"].status == "SPEAKER" else [],
         [InlineKeyboardButton('Вопросы ко мне',
                               callback_data="my_questions")] if context.bot_data["user"].status == "SPEAKER" else [],
@@ -36,6 +36,10 @@ def start(update: Updater, context: CallbackContext):
                               callback_data="networking"),
          InlineKeyboardButton("Задонатить",
                               callback_data="make_donation")],
+        [InlineKeyboardButton("Подать заявку на участие",
+                              callback_data="make_application")],
+        [InlineKeyboardButton("Подписаться на рассылку",
+                              callback_data="get_notifications")]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     if update.message:
@@ -69,6 +73,10 @@ def choose_action(update: Updater, context: CallbackContext):
         return get_networking(update, context)
     elif data == "make_donation":
         return get_donation(update, context)
+    elif data == "make_application":
+        return make_application(update, context)
+    elif data == "get_notifications":
+        return get_notifications(update, context)
 
 
 def start_lecture(update: Updater, context: CallbackContext):
@@ -433,6 +441,41 @@ def successful_payment_callback(update: Updater, context: CallbackContext):
 # !Донанты------------------------------------------------------------------------------------------
 
 
+def make_application(update: Updater, context: CallbackContext):
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Если вы хотите приянть участие в качестве спикера\n на следующем мероприятии, напишите\n тему вашего доклада"
+    )
+
+    return "WAITING_APPLICATION"
+
+
+def waiting_application(update: Updater, context: CallbackContext):
+    message = update.message.text
+    applicant = context.bot_data["user"]
+    new_application = Application.objects.create(
+        applicant=applicant,
+        message=message
+        )
+    new_application.save()
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text="Ваша заявка успешно отправлена"
+    )
+
+    return start(update, context)
+
+
+def get_notifications(update: Updater, context: CallbackContext):
+    context.bot_data["user"].get_notifications = True
+    context.bot_data["user"].save
+    context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=f"Вы подписались на нашу рассылку! Мы уведомим вас о датах следующих мероприятий!"
+    )
+    return start(update, context)
+
+
 def handle_users_reply(update,
                        context,
                        ):
@@ -467,6 +510,7 @@ def handle_users_reply(update,
         "CONFIRM_DONATION_CUSTOM": confirm_donation_custom,
         "HANDLE_START": handle_start,
         "WAITING_QUESTION": waiting_question,
+        "WAITING_APPLICATION": waiting_application,
         }
     state_handler = states_functions[user_state]
     try:
