@@ -47,7 +47,7 @@ python3 tg_bot.py
 
 Выполинте команды:
 ```
-git clone
+git clone https://github.com/Gulfia83/python_meetup.git
 
 docker-compose up -d
 ```
