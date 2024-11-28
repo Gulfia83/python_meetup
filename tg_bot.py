@@ -1,17 +1,23 @@
+import logging
 import os
+from datetime import date
+from logging.handlers import RotatingFileHandler
 from random import choice
 
-from datetime import date
-import logging
-from logging.handlers import RotatingFileHandler
 import django
 from django.utils.timezone import now
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, \
-    LabeledPrice, ParseMode
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
-      CallbackContext, CallbackQueryHandler, PreCheckoutQueryHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, LabeledPrice, ParseMode
+from telegram.ext import (
+    CallbackContext,
+    CallbackQueryHandler,
+    CommandHandler,
+    Filters,
+    MessageHandler,
+    PreCheckoutQueryHandler,
+    Updater,
+)
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'python_meetup.settings')
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "python_meetup.settings")
 django.setup()
 
 logger = logging.getLogger("Bot logger")
@@ -19,32 +25,40 @@ logger.setLevel(logging.INFO)
 handler = RotatingFileHandler("app.log", maxBytes=200)
 logger.addHandler(handler)
 
-from python_meetup.settings import TG_BOT_TOKEN, PAY_MASTER_TOKEN
-
-from bot.models import User, Questions, Donate, Program, Application
+from bot.models import Application, Donate, Program, Questions, User
+from python_meetup.settings import PAY_MASTER_TOKEN, TG_BOT_TOKEN
 
 
 def start(update: Updater, context: CallbackContext):
     logger.info("Начало работы")
     keyboard = [
-        [InlineKeyboardButton("Начать лекцию",
-                              callback_data="start_lecture"),
-         InlineKeyboardButton('Закончить лекцию',
-                              callback_data="end_lecture")] if context.bot_data["user"].status == "SPEAKER" else [],
-        [InlineKeyboardButton('Вопросы ко мне',
-                              callback_data="my_questions")] if context.bot_data["user"].status == "SPEAKER" else [],
-        [InlineKeyboardButton("Программа",
-                              callback_data="show_program"),
-         InlineKeyboardButton("Задать вопрос спикеру",
-                              callback_data="add_question")],
-        [InlineKeyboardButton("Хочу познакомиться",
-                              callback_data="networking"),
-         InlineKeyboardButton("Задонатить",
-                              callback_data="make_donation")],
-        [InlineKeyboardButton("Подать заявку на участие",
-                              callback_data="make_application")],
-        [InlineKeyboardButton("Подписаться на рассылку",
-                              callback_data="get_notifications")]
+        [
+            InlineKeyboardButton("Начать лекцию", callback_data="start_lecture"),
+            InlineKeyboardButton("Закончить лекцию", callback_data="end_lecture"),
+        ]
+        if context.bot_data["user"].status == "SPEAKER"
+        else [],
+        [InlineKeyboardButton("Вопросы ко мне", callback_data="my_questions")]
+        if context.bot_data["user"].status == "SPEAKER"
+        else [],
+        [
+            InlineKeyboardButton("Программа", callback_data="show_program"),
+            InlineKeyboardButton("Задать вопрос спикеру", callback_data="add_question"),
+        ],
+        [
+            InlineKeyboardButton("Хочу познакомиться", callback_data="networking"),
+            InlineKeyboardButton("Задонатить", callback_data="make_donation"),
+        ],
+        [
+            InlineKeyboardButton(
+                "Подать заявку на участие", callback_data="make_application"
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                "Подписаться на рассылку", callback_data="get_notifications"
+            )
+        ],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     if update.message:
@@ -54,8 +68,7 @@ def start(update: Updater, context: CallbackContext):
         )
         message = update.effective_message
         context.bot.delete_message(
-            chat_id=message.chat_id,
-            message_id=update.message.message_id
+            chat_id=message.chat_id, message_id=update.message.message_id
         )
     elif update.callback_query:
         query = update.callback_query
@@ -64,8 +77,7 @@ def start(update: Updater, context: CallbackContext):
             reply_markup=reply_markup,
         )
         context.bot.delete_message(
-            chat_id=query.message.chat_id,
-            message_id=query.message.message_id
+            chat_id=query.message.chat_id, message_id=query.message.message_id
         )
 
     return "CHOOSE_ACTION"
@@ -118,19 +130,18 @@ def get_questions(update: Updater, context: CallbackContext):
     ]
     text = ""
     for question in questions:
-        text += f"Вопрос от @<i><b>{question.asker.tg_nick}</b></i>: {question.text}\n\n"
+        text += (
+            f"Вопрос от @<i><b>{question.asker.tg_nick}</b></i>: {question.text}\n\n"
+        )
 
     context.bot.send_message(
         chat_id=user.tg_id,
         text=text,
         reply_markup=InlineKeyboardMarkup(keyboard),
-        parse_mode=ParseMode.HTML
-        )
-    message = update.effective_message
-    context.bot.delete_message(
-        chat_id=message.chat_id,
-        message_id=message.message_id
+        parse_mode=ParseMode.HTML,
     )
+    message = update.effective_message
+    context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
     return "HANDLE_START"
 
 
@@ -174,14 +185,10 @@ def show_program(update: Updater, context: CallbackContext):
 def add_question(update: Updater, context: CallbackContext):
     logger.info("Задать вопрос докладчику")
     context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Введите ваш вопрос"
+        chat_id=update.effective_chat.id, text="Введите ваш вопрос"
     )
     message = update.effective_message
-    context.bot.delete_message(
-        chat_id=message.chat_id,
-        message_id=message.message_id
-    )
+    context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
 
     return "WAITING_QUESTION"
 
@@ -194,37 +201,32 @@ def waiting_question(update: Updater, context: CallbackContext):
     if not answerer:
         context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text="К сожалению сейчас некому задать вопрос.\nДождитесь следующего спикера"
+            text="К сожалению сейчас некому задать вопрос.\nДождитесь следующего спикера",
         )
         return start(update, context)
     new_question = Questions.objects.create(
-        asker=asker,
-        answerer=answerer,
-        text=question_text
-        )
+        asker=asker, answerer=answerer, text=question_text
+    )
     new_question.save()
     context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Ваш вопрос успешно отправлен"
+        chat_id=update.effective_chat.id, text="Ваш вопрос успешно отправлен"
     )
     return start(update, context)
 
 
 def get_networking(update: Updater, context: CallbackContext):
     logger.info("Начать знакомиться")
-    if context.bot_data["user"].active == False:
+    if not context.bot_data["user"].active:
         keyboard = [
-            [InlineKeyboardButton("Подтвердить участие",
-                                  callback_data="confirm")],
-            [InlineKeyboardButton("Главное меню",
-                                  callback_data="to_start")]
+            [InlineKeyboardButton("Подтвердить участие", callback_data="confirm")],
+            [InlineKeyboardButton("Главное меню", callback_data="to_start")],
         ]
         context.bot.send_message(
             chat_id=update.effective_chat.id,
-            text='''Вы можете пообщаться с другими участниками! Для этого\n
+            text="""Вы можете пообщаться с другими участниками! Для этого\n
             нужно заполнить анкету и я подберу вам собеседника.\n
-            Подтвердите участие.''',
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            Подтвердите участие.""",
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
 
         return "CONFIRM_NETWORKING"
@@ -245,15 +247,9 @@ def confirm_networking(update: Updater, context: CallbackContext):
 
 def get_user_info(update: Updater, context: CallbackContext):
     logger.info("Получить информацию о пользователе")
-    context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Введите ваше имя"
-    )
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Введите ваше имя")
     message = update.effective_message
-    context.bot.delete_message(
-        chat_id=message.chat_id,
-        message_id=message.message_id
-    )
+    context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
     return "GET_NAME"
 
 
@@ -262,14 +258,10 @@ def get_name(update: Updater, context: CallbackContext):
     message_text = update.message.text
     context.bot_data["user"].name = message_text
     context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Введите название вашей компании"
+        chat_id=update.effective_chat.id, text="Введите название вашей компании"
     )
     message = update.effective_message
-    context.bot.delete_message(
-        chat_id=message.chat_id,
-        message_id=message.message_id
-    )
+    context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
     return "GET_COMPANY"
 
 
@@ -278,14 +270,10 @@ def get_company(update: Updater, context: CallbackContext):
     message_text = update.message.text
     context.bot_data["user"].company = message_text
     context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Введите вашу должность"
+        chat_id=update.effective_chat.id, text="Введите вашу должность"
     )
     message = update.effective_message
-    context.bot.delete_message(
-        chat_id=message.chat_id,
-        message_id=message.message_id
-    )
+    context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
     return "GET_POSITION"
 
 
@@ -294,14 +282,10 @@ def get_position(update: Updater, context: CallbackContext):
     message_text = update.message.text
     context.bot_data["user"].position = message_text
     context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Сейчас я подберу вам собеседника"
+        chat_id=update.effective_chat.id, text="Сейчас я подберу вам собеседника"
     )
     message = update.effective_message
-    context.bot.delete_message(
-        chat_id=message.chat_id,
-        message_id=message.message_id
-    )
+    context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
     return make_networking(update, context)
 
 
@@ -310,35 +294,38 @@ def make_networking(update: Updater, context: CallbackContext):
     active_users_count = User.objects.filter(active=True).count()
     if active_users_count <= 1:
         text = f'<i><b>{context.bot_data["user"].name}</b></i>, рады видеть вас в нетворкинге.\n\n'
-        text += 'Сейчас нет других собеседников. Я уведомлю вас, когда они появятся 🤗'
+        text += "Сейчас нет других собеседников. Я уведомлю вас, когда они появятся 🤗"
 
         context.bot.send_message(
             chat_id=update.effective_chat.id,
             text=text,
             reply_markup=InlineKeyboardMarkup(
                 [[InlineKeyboardButton("Главное меню", callback_data="to_start")]]
-                ),
+            ),
             parse_mode=ParseMode.HTML,
-            )
-   
+        )
+
         return "HANDLE_START"
 
     keyboard = [
-        [InlineKeyboardButton("Познакомиться",
-                              callback_data="find_contact")] if active_users_count > 1 else [],
-        [InlineKeyboardButton("Отказаться от участия",
-                              callback_data="cancel_networking")],
-        [InlineKeyboardButton("Главное меню",
-                              callback_data="to_start")]
+        [InlineKeyboardButton("Познакомиться", callback_data="find_contact")]
+        if active_users_count > 1
+        else [],
+        [
+            InlineKeyboardButton(
+                "Отказаться от участия", callback_data="cancel_networking"
+            )
+        ],
+        [InlineKeyboardButton("Главное меню", callback_data="to_start")],
     ]
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f'''
+        text=f"""
         {context.bot_data['user'].name}, рады видеть вас в нетворкинге.
-        Сейчас нас {active_users_count} человек''',
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        Сейчас нас {active_users_count} человек""",
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
-    
+
     return "NETWORK_COMMUNICATE"
 
 
@@ -365,32 +352,30 @@ def find_contact(update: Updater, context: CallbackContext):
     context.bot_data["networking"] = context.bot_data["user"]
     while context.bot_data["networking"] == context.bot_data["user"]:
         context.bot_data["networking"] = choice(
-            User.objects.filter(active=True).exclude(
-                tg_id=update.effective_chat.id
-                )
+            User.objects.filter(active=True).exclude(tg_id=update.effective_chat.id)
         )
 
     keyboard = [
         [InlineKeyboardButton("Следующий контакт", callback_data="next_contact")],
-        [InlineKeyboardButton("Отказаться от участия",
-                              callback_data="cancel_networking")],
-        [InlineKeyboardButton("Главное меню", callback_data="to_start")]
+        [
+            InlineKeyboardButton(
+                "Отказаться от участия", callback_data="cancel_networking"
+            )
+        ],
+        [InlineKeyboardButton("Главное меню", callback_data="to_start")],
     ]
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f'''
+        text=f"""
         {context.bot_data['networking'].name}
         {context.bot_data['networking'].position} в {context.bot_data['networking'].company}
         Связаться в Telegram:
         @{context.bot_data['networking'].tg_nick}
-        ''',
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        """,
+        reply_markup=InlineKeyboardMarkup(keyboard),
     )
     message = update.effective_message
-    context.bot.delete_message(
-        chat_id=message.chat_id,
-        message_id=message.message_id
-    )
+    context.bot.delete_message(chat_id=message.chat_id, message_id=message.message_id)
     return "NEXT_CONTACT"
 
 
@@ -403,6 +388,7 @@ def next_contact(update: Updater, context: CallbackContext):
         return cancel_networking(update, context)
     elif data == "next_contact":
         return find_contact(update, context)
+
 
 # !Донанты------------------------------------------------------------------------------------------
 
@@ -437,8 +423,7 @@ def confirm_donation(update: Updater, context: CallbackContext):
 
     if data.startswith("donate_"):
         amount = int(data.split("_")[1])
-        prices = [LabeledPrice(label=f"Донат на сумму {amount} ₽",
-                               amount=amount * 100)]
+        prices = [LabeledPrice(label=f"Донат на сумму {amount} ₽", amount=amount * 100)]
 
         context.bot.send_invoice(
             chat_id=chat_id,
@@ -459,10 +444,9 @@ def confirm_donation(update: Updater, context: CallbackContext):
 def user_sum_for_donate(update: Updater, context: CallbackContext):
     logger.info("Введённая пользоветелем сумма для доната")
     context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Введите желаемую сумму пожертования"
+        chat_id=update.effective_chat.id, text="Введите желаемую сумму пожертования"
     )
-    
+
     return "CONFIRM_DONATION_CUSTOM"
 
 
@@ -483,7 +467,7 @@ def confirm_donation_custom(update: Updater, context: CallbackContext):
         currency="RUB",
         prices=prices,
         start_parameter="donation",
-        )
+    )
     return "CHOOSE_ACTION"
 
 
@@ -497,7 +481,7 @@ def pre_checkout_callback(update: Updater, context: CallbackContext):
         query.answer(ok=True)
         user, _ = User.objects.get_or_create(
             tg_id=update.effective_user.id,
-            defaults={"tg_nick": update.effective_user.first_name}
+            defaults={"tg_nick": update.effective_user.first_name},
         )
         Donate.objects.create(user=user, amount=amount, donated_at=now())
     else:
@@ -511,10 +495,11 @@ def successful_payment_callback(update: Updater, context: CallbackContext):
 
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"Спасибо за ваш донат на сумму {amount} ₽!"
+        text=f"Спасибо за ваш донат на сумму {amount} ₽!",
     )
 
     return start(update, context)
+
 
 # !Донанты------------------------------------------------------------------------------------------
 
@@ -523,9 +508,9 @@ def make_application(update: Updater, context: CallbackContext):
     logger.info("Заявка на участие докладчиком")
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text='''Если вы хотите принять участие в качестве спикера на\n
-        следующем мероприятии, напишите тему вашего доклада'''
-        )
+        text="""Если вы хотите принять участие в качестве спикера на\n
+        следующем мероприятии, напишите тему вашего доклада""",
+    )
 
     return "WAITING_APPLICATION"
 
@@ -534,14 +519,10 @@ def waiting_application(update: Updater, context: CallbackContext):
     logger.info("Сохранение темы доклада в бд")
     message = update.message.text
     applicant = context.bot_data["user"]
-    new_application = Application.objects.create(
-        applicant=applicant,
-        message=message
-        )
+    new_application = Application.objects.create(applicant=applicant, message=message)
     new_application.save()
     context.bot.send_message(
-        chat_id=update.effective_chat.id,
-        text="Ваша заявка успешно отправлена"
+        chat_id=update.effective_chat.id, text="Ваша заявка успешно отправлена"
     )
 
     return start(update, context)
@@ -549,25 +530,25 @@ def waiting_application(update: Updater, context: CallbackContext):
 
 def get_notifications(update: Updater, context: CallbackContext):
     logger.info("Получение рассылки")
-    if context.bot_data["user"].get_notifications == True:
+    if context.bot_data["user"].get_notifications:
         context.bot.send_message(
-            chat_id=update.effective_chat.id,
-            text=f"Вы уже подписаны на рассылку!"
+            chat_id=update.effective_chat.id, text="Вы уже подписаны на рассылку!"
         )
         return start(update, context)
     context.bot_data["user"].get_notifications = True
     context.bot_data["user"].save
     context.bot.send_message(
         chat_id=update.effective_chat.id,
-        text=f"Вы подписались на нашу рассылку! Мы уведомим вас о датах следующих мероприятий!"
+        text="Вы подписались на нашу рассылку! Мы уведомим вас о датах следующих мероприятий!",
     )
-    
+
     return start(update, context)
 
 
-def handle_users_reply(update,
-                       context,
-                       ):
+def handle_users_reply(
+    update,
+    context,
+):
     logger.info("Обработка ответов пользователей")
     if update.message:
         user_reply = update.message.text
@@ -579,34 +560,34 @@ def handle_users_reply(update,
         username = update.callback_query.from_user.username
     else:
         return
-    user, created = User.objects.get_or_create(tg_id=chat_id,
-                                               defaults={'tg_state': 'START',
-                                                         'tg_nick': username})
-    context.bot_data['user'] = user
-    if user_reply == '/start':
-        user_state = 'START'
+    user, created = User.objects.get_or_create(
+        tg_id=chat_id, defaults={"tg_state": "START", "tg_nick": username}
+    )
+    context.bot_data["user"] = user
+    if user_reply == "/start":
+        user_state = "START"
     else:
-        user_state = context.bot_data['user'].tg_state
+        user_state = context.bot_data["user"].tg_state
     states_functions = {
-        'START': start,
-        'CHOOSE_ACTION': choose_action,
-        'CONFIRM_NETWORKING': confirm_networking,
-        'GET_NAME': get_name,
-        'GET_COMPANY': get_company,
-        'GET_POSITION': get_position,
-        'NETWORK_COMMUNICATE': network_communicate,
-        'NEXT_CONTACT': next_contact,
-        'CONFIRM_DONATION': confirm_donation,
+        "START": start,
+        "CHOOSE_ACTION": choose_action,
+        "CONFIRM_NETWORKING": confirm_networking,
+        "GET_NAME": get_name,
+        "GET_COMPANY": get_company,
+        "GET_POSITION": get_position,
+        "NETWORK_COMMUNICATE": network_communicate,
+        "NEXT_CONTACT": next_contact,
+        "CONFIRM_DONATION": confirm_donation,
         "CONFIRM_DONATION_CUSTOM": confirm_donation_custom,
         "HANDLE_START": handle_start,
         "WAITING_QUESTION": waiting_question,
         "WAITING_APPLICATION": waiting_application,
-        }
+    }
     state_handler = states_functions[user_state]
     try:
         next_state = state_handler(update, context)
-        context.bot_data['user'].tg_state = next_state
-        context.bot_data['user'].save()
+        context.bot_data["user"].tg_state = next_state
+        context.bot_data["user"].save()
     except Exception as err:
         print(err)
 
@@ -615,17 +596,15 @@ def main() -> None:
     updater = Updater(TG_BOT_TOKEN)
     dispatcher = updater.dispatcher
     dispatcher.add_handler(PreCheckoutQueryHandler(pre_checkout_callback))
-    dispatcher.add_handler(MessageHandler(Filters.successful_payment,
-                                          successful_payment_callback))
     dispatcher.add_handler(
-        CallbackQueryHandler(handle_users_reply))
-    dispatcher.add_handler(
-        MessageHandler(Filters.text, handle_users_reply))
-    dispatcher.add_handler(
-        CommandHandler('start', handle_users_reply))
+        MessageHandler(Filters.successful_payment, successful_payment_callback)
+    )
+    dispatcher.add_handler(CallbackQueryHandler(handle_users_reply))
+    dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
+    dispatcher.add_handler(CommandHandler("start", handle_users_reply))
     updater.start_polling()
     updater.idle()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
