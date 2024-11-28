@@ -42,6 +42,7 @@ class QuestionAdmin(admin.ModelAdmin):
 @admin.register(Letters)
 class LetterAdmin(admin.ModelAdmin):
     list_display = ("title", "message", "sent_at")
+    readonly_fields = ["sent_at"]
 
 
 @admin.register(Application)
