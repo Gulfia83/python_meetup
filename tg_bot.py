@@ -2,7 +2,8 @@ import os
 from random import choice
 
 from datetime import date
-
+import logging
+from logging.handlers import RotatingFileHandler
 import django
 from django.utils.timezone import now
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, \
@@ -13,12 +14,18 @@ from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'python_meetup.settings')
 django.setup()
 
+logger = logging.getLogger("Bot logger")
+logger.setLevel(logging.INFO)
+handler = RotatingFileHandler("app.log", maxBytes=200)
+logger.addHandler(handler)
+
 from python_meetup.settings import TG_BOT_TOKEN, PAY_MASTER_TOKEN
 
 from bot.models import User, Questions, Donate, Program, Application
 
 
 def start(update: Updater, context: CallbackContext):
+    logger.info("Начало работы")
     keyboard = [
         [InlineKeyboardButton("Начать лекцию",
                               callback_data="start_lecture"),
@@ -65,6 +72,7 @@ def start(update: Updater, context: CallbackContext):
 
 
 def choose_action(update: Updater, context: CallbackContext):
+    logger.info("Выбор действия")
     data = update.callback_query.data
     if data == "start_lecture":
         return start_lecture(update, context)
@@ -87,18 +95,21 @@ def choose_action(update: Updater, context: CallbackContext):
 
 
 def start_lecture(update: Updater, context: CallbackContext):
+    logger.info("Начало доклада")
     context.bot_data["user"].ready_to_questions = True
     context.bot_data["user"].save
     return start(update, context)
 
 
 def end_lecture(update: Updater, context: CallbackContext):
+    logger.info("Конец доклада")
     context.bot_data["user"].ready_to_questions = False
     context.bot_data["user"].save
     return start(update, context)
 
 
 def get_questions(update: Updater, context: CallbackContext):
+    logger.info("Получить вопрос от слушателя")
     user = context.bot_data["user"]
 
     questions = Questions.objects.filter(answerer=user)
@@ -124,12 +135,14 @@ def get_questions(update: Updater, context: CallbackContext):
 
 
 def handle_start(update: Updater, context: CallbackContext):
+    logger.info("Возврат в меню")
     data = update.callback_query.data
     if data == "to_start":
         return start(update, context)
 
 
 def show_program(update: Updater, context: CallbackContext):
+    logger.info("Показать программу")
     today = date.today()
     program_today = (
         Program.objects.filter(date=today).prefetch_related("lectures").first()
@@ -159,6 +172,7 @@ def show_program(update: Updater, context: CallbackContext):
 
 
 def add_question(update: Updater, context: CallbackContext):
+    logger.info("Задать вопрос докладчику")
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text="Введите ваш вопрос"
@@ -173,6 +187,7 @@ def add_question(update: Updater, context: CallbackContext):
 
 
 def waiting_question(update: Updater, context: CallbackContext):
+    logger.info("Ожидание вопроса")
     question_text = update.message.text
     asker = context.bot_data["user"]
     answerer = User.objects.filter(ready_to_questions=True).first()
@@ -196,6 +211,7 @@ def waiting_question(update: Updater, context: CallbackContext):
 
 
 def get_networking(update: Updater, context: CallbackContext):
+    logger.info("Начать знакомиться")
     if context.bot_data["user"].active == False:
         keyboard = [
             [InlineKeyboardButton("Подтвердить участие",
@@ -218,6 +234,7 @@ def get_networking(update: Updater, context: CallbackContext):
 
 
 def confirm_networking(update: Updater, context: CallbackContext):
+    logger.info("Подтверждение знакомства")
     if update.callback_query.data == "to_start":
         return start(update, context)
     elif update.callback_query.data == "confirm":
@@ -227,6 +244,7 @@ def confirm_networking(update: Updater, context: CallbackContext):
 
 
 def get_user_info(update: Updater, context: CallbackContext):
+    logger.info("Получить информацию о пользователе")
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text="Введите ваше имя"
@@ -240,6 +258,7 @@ def get_user_info(update: Updater, context: CallbackContext):
 
 
 def get_name(update: Updater, context: CallbackContext):
+    logger.info("Получить имя пользователя")
     message_text = update.message.text
     context.bot_data["user"].name = message_text
     context.bot.send_message(
@@ -255,6 +274,7 @@ def get_name(update: Updater, context: CallbackContext):
 
 
 def get_company(update: Updater, context: CallbackContext):
+    logger.info("Получить название компании")
     message_text = update.message.text
     context.bot_data["user"].company = message_text
     context.bot.send_message(
@@ -270,6 +290,7 @@ def get_company(update: Updater, context: CallbackContext):
 
 
 def get_position(update: Updater, context: CallbackContext):
+    logger.info("Получить должность пользователя")
     message_text = update.message.text
     context.bot_data["user"].position = message_text
     context.bot.send_message(
@@ -285,6 +306,7 @@ def get_position(update: Updater, context: CallbackContext):
 
 
 def make_networking(update: Updater, context: CallbackContext):
+    logger.info("Начало нетворкинга")
     active_users_count = User.objects.filter(active=True).count()
     if active_users_count <= 1:
         text = f'<i><b>{context.bot_data["user"].name}</b></i>, рады видеть вас в нетворкинге.\n\n'
@@ -321,6 +343,7 @@ def make_networking(update: Updater, context: CallbackContext):
 
 
 def network_communicate(update: Updater, context: CallbackContext):
+    logger.info("Возврат в главное меню/Отказаться от участия/Познакомиться")
     data = update.callback_query.data
     if data == "to_start":
         return start(update, context)
@@ -331,12 +354,14 @@ def network_communicate(update: Updater, context: CallbackContext):
 
 
 def cancel_networking(update: Updater, context: CallbackContext):
+    logger.info("Отменить знакомство")
     context.bot_data["user"].active = False
     context.bot_data["user"].save
     return start(update, context)
 
 
 def find_contact(update: Updater, context: CallbackContext):
+    logger.info("Найти пользователя для знакомства")
     context.bot_data["networking"] = context.bot_data["user"]
     while context.bot_data["networking"] == context.bot_data["user"]:
         context.bot_data["networking"] = choice(
@@ -370,6 +395,7 @@ def find_contact(update: Updater, context: CallbackContext):
 
 
 def next_contact(update: Updater, context: CallbackContext):
+    logger.info("Переключение кнопок")
     data = update.callback_query.data
     if data == "to_start":
         return start(update, context)
@@ -382,6 +408,7 @@ def next_contact(update: Updater, context: CallbackContext):
 
 
 def get_donation(update: Updater, context: CallbackContext):
+    logger.info("Обработка донатов")
     keyboard = [
         [InlineKeyboardButton("50 ₽", callback_data="donate_50")],
         [InlineKeyboardButton("100 ₽", callback_data="donate_100")],
@@ -398,6 +425,7 @@ def get_donation(update: Updater, context: CallbackContext):
 
 
 def confirm_donation(update: Updater, context: CallbackContext):
+    logger.info("Подтверждение доната")
     query = update.callback_query
     data = query.data
     chat_id = query.message.chat_id
@@ -429,6 +457,7 @@ def confirm_donation(update: Updater, context: CallbackContext):
 
 
 def user_sum_for_donate(update: Updater, context: CallbackContext):
+    logger.info("Введённая пользоветелем сумма для доната")
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text="Введите желаемую сумму пожертования"
@@ -438,6 +467,7 @@ def user_sum_for_donate(update: Updater, context: CallbackContext):
 
 
 def confirm_donation_custom(update: Updater, context: CallbackContext):
+    logger.info("Обработка суммы доната пользователя")
     chat_id = update.effective_chat.id
     message_text = update.message.text
 
@@ -458,6 +488,7 @@ def confirm_donation_custom(update: Updater, context: CallbackContext):
 
 
 def pre_checkout_callback(update: Updater, context: CallbackContext):
+    logger.info("Подтверждение оплаты")
     query = update.pre_checkout_query
     payload = query.invoice_payload
     amount = int(payload.split("_")[1])
@@ -474,6 +505,7 @@ def pre_checkout_callback(update: Updater, context: CallbackContext):
 
 
 def successful_payment_callback(update: Updater, context: CallbackContext):
+    logger.info("Оплата успешно принята")
     payment = update.message.successful_payment
     amount = payment.total_amount / 100
 
@@ -488,6 +520,7 @@ def successful_payment_callback(update: Updater, context: CallbackContext):
 
 
 def make_application(update: Updater, context: CallbackContext):
+    logger.info("Заявка на участие докладчиком")
     context.bot.send_message(
         chat_id=update.effective_chat.id,
         text='''Если вы хотите принять участие в качестве спикера на\n
@@ -498,6 +531,7 @@ def make_application(update: Updater, context: CallbackContext):
 
 
 def waiting_application(update: Updater, context: CallbackContext):
+    logger.info("Сохранение темы доклада в бд")
     message = update.message.text
     applicant = context.bot_data["user"]
     new_application = Application.objects.create(
@@ -514,6 +548,7 @@ def waiting_application(update: Updater, context: CallbackContext):
 
 
 def get_notifications(update: Updater, context: CallbackContext):
+    logger.info("Получение рассылки")
     if context.bot_data["user"].get_notifications == True:
         context.bot.send_message(
             chat_id=update.effective_chat.id,
@@ -533,6 +568,7 @@ def get_notifications(update: Updater, context: CallbackContext):
 def handle_users_reply(update,
                        context,
                        ):
+    logger.info("Обработка ответов пользователей")
     if update.message:
         user_reply = update.message.text
         chat_id = update.message.chat_id
