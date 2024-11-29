@@ -13,15 +13,11 @@ class User(models.Model):
         db_index=True,
     )
     tg_nick = models.CharField(
-        'Ник в телеграм',
+        "Ник в телеграм",
         max_length=50,
         blank=True,
     )
-    tg_state = models.CharField(
-        'Состояние бота',
-        max_length=50,
-        default='START'
-    )
+    tg_state = models.CharField("Состояние бота", max_length=50, default="START")
     name = models.CharField(
         "Имя",
         max_length=50,
@@ -45,21 +41,10 @@ class User(models.Model):
         ("SPEAKER", "Спикер"),
         ("MANAGER", "Менеджер"),
     ]
-    status = models.CharField(
-        "Статус", max_length=50, choices=STATUS_CHOICES, default="PARTICIPANT"
-    )
-    active = models.BooleanField(
-        'Готов/не готов к общению',
-        default=False
-    )
-    ready_to_questions = models.BooleanField(
-        'Готов/не готов получать вопросы',
-        default=False
-    )
-    get_notifications = models.BooleanField(
-        'Получать рассылку',
-        default=False
-    )
+    status = models.CharField("Статус", max_length=50, choices=STATUS_CHOICES, default="PARTICIPANT")
+    active = models.BooleanField("Готов/не готов к общению", default=False)
+    ready_to_questions = models.BooleanField("Готов/не готов получать вопросы", default=False)
+    get_notifications = models.BooleanField("Получать рассылку", default=False)
 
     def __str__(self) -> str:
         return f"{self.tg_nick} - {self.tg_id}"
@@ -75,7 +60,10 @@ class User(models.Model):
             users_active = User.objects.filter(ready_to_questions=True)
             for user in users_active:
                 try:
-                    bot.send_message(chat_id=user.tg_id, text="Новый пользователь зарегистрировался! Теперь вы можете пообщаться.")
+                    bot.send_message(
+                        chat_id=user.tg_id,
+                        text="Новый пользователь зарегистрировался! Теперь вы можете пообщаться.",
+                    )
                 except Exception as e:
                     print(f"Ошибка при отправке сообщения пользователю {user.tg_id}: {e}")
 
@@ -96,9 +84,7 @@ class Lecture(models.Model):
         ("ONGOING", "Идёт"),
         ("COMPLETED", "Завершена"),
     ]
-    status = models.CharField(
-        "Статус лекции", max_length=20, choices=STATUS_CHOICES, default="PLANNED"
-    )
+    status = models.CharField("Статус лекции", max_length=20, choices=STATUS_CHOICES, default="PLANNED")
 
     def __str__(self) -> str:
         return f"{self.name} - {self.speaker}"
@@ -111,12 +97,7 @@ class Lecture(models.Model):
 
 class Program(models.Model):
     name = models.CharField("Название программы", max_length=255)
-    lectures = models.ManyToManyField(
-        Lecture,
-        related_name="programs",
-        verbose_name="Лекции",
-        blank=True
-    )
+    lectures = models.ManyToManyField(Lecture, related_name="programs", verbose_name="Лекции", blank=True)
     date = models.DateField("Дата проведения программы", blank=True, null=True)
 
     def send_program(self):
@@ -128,7 +109,8 @@ class Program(models.Model):
             try:
                 bot.send_message(
                     chat_id=user.tg_id,
-                    text=f"Сообщаем вам, что {self.date} будет проходить мероприятие '{self.name}'. Ждем вас!")
+                    text=f"Сообщаем вам, что {self.date} будет проходить мероприятие '{self.name}'. Ждем вас!",
+                )
             except Exception as e:
                 print(f"Ошибка при отправке сообщения пользователю {user.tg_id}: {e}")
 
@@ -166,7 +148,7 @@ class Questions(models.Model):
         User,
         on_delete=models.CASCADE,
         verbose_name="От кого",
-        related_name="questions_from"
+        related_name="questions_from",
     )
     answerer = models.ForeignKey(
         User,
@@ -178,10 +160,7 @@ class Questions(models.Model):
         "Текст вопроса",
         blank=True,
     )
-    asked_at = models.DateTimeField(
-        "Время создания",
-        default=timezone.now()
-    )
+    asked_at = models.DateTimeField("Время создания", default=timezone.now())
 
     def __str__(self) -> str:
         return f"Вопрос {self.answerer.__str__()}"
@@ -226,24 +205,15 @@ class Application(models.Model):
         verbose_name="От кого",
         related_name="application_from",
     )
-    message = models.TextField(
-        "Текст заявки",
-        blank=True
-    )
+    message = models.TextField("Текст заявки", blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    accepted = models.BooleanField(
-        'Принята/отклонена',
-        default=False
-    )
+    accepted = models.BooleanField("Принята/отклонена", default=False)
 
     def send_accept(self, user):
         bot = Bot(token=TG_BOT_TOKEN)
         user = self.applicant
         try:
-            bot.send_message(
-                chat_id=user.tg_id,
-                text="Ваша заявка на участие одобрена!"
-                )
+            bot.send_message(chat_id=user.tg_id, text="Ваша заявка на участие одобрена!")
         except Exception as e:
             print(f"Ошибка при отправке сообщения пользователю {user.tg_id}: {e}")
 

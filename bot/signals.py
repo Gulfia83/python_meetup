@@ -1,6 +1,8 @@
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
-from .models import Letters, User, Program, Application
+
+from .models import Application, Letters, Program, User
+
 
 @receiver(post_save, sender=Letters)
 def send_newsletter_on_save(sender, instance, created, **kwargs):

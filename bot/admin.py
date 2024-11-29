@@ -1,6 +1,14 @@
 from django.contrib import admin
-from .models import Donate, Lecture, Letters, Program, User, Questions, \
-    Letters, Application
+
+from .models import (
+    Application,
+    Donate,
+    Lecture,
+    Letters,
+    Program,
+    Questions,
+    User,
+)
 
 
 @admin.register(User)
